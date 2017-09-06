@@ -86,7 +86,6 @@ class DeviceMotion {
   rotationRate = {alpha: 0, beta: 0, gamma: 0};
 
   constructor() {
-    super();
     _framerate = 24;
   }
   _listeners = [];
