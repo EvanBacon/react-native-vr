@@ -1,4 +1,4 @@
-import Expo from 'expo';
+import Expo, {Accelerometer, Gyroscope} from 'expo';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -24,10 +24,126 @@ console.ignoredYellowBox = [
 ];
 
 
+
+const StereoEffect = function ( renderer ) {
+  
+    var _stereo = new THREE.StereoCamera();
+    _stereo.aspect = 0.5;
+  
+    this.setEyeSeparation = function ( eyeSep ) {
+  
+      _stereo.eyeSep = eyeSep;
+  
+    };
+  
+    this.setSize = function ( width, height ) {
+  
+      renderer.setSize( width, height );
+  
+    };
+  
+    this.render = function ( scene, camera, gl ) {
+      
+      scene.updateMatrixWorld();
+  
+      if ( camera.parent === null ) camera.updateMatrixWorld();
+
+      _stereo.update( camera );
+      renderer.render(scene, camera);
+      
+      var size = renderer.getSize();
+  
+      if ( renderer.autoClear ) renderer.clear();
+      renderer.setScissorTest( true );
+  
+      renderer.setScissor( 0, 0, size.width / 2, size.height );
+      renderer.setViewport( 0, 0, size.width / 2, size.height );
+      renderer.render( scene, _stereo.cameraL );
+  
+      renderer.setScissor( size.width / 2, 0, size.width / 2, size.height );
+      renderer.setViewport( size.width / 2, 0, size.width / 2, size.height );
+      renderer.render( scene, _stereo.cameraR );
+  
+      renderer.setScissorTest( false );
+  
+    };
+  
+  };
+
+class DeviceMotion {
+  _framerate;
+  set frameRate(value) {
+    this._framerate = value;
+    Accelerometer.setUpdateInterval(value);
+    Gyroscope.setUpdateInterval(value);
+  }
+  get framerate() {
+    return this._framerate;
+  }
+
+  acceleration = {x: 0, y: 0, z: 0};
+  accelerationIncludingGravity = {x: 0, y: 0, z: 0};
+  rotationRate = {alpha: 0, beta: 0, gamma: 0};
+
+  constructor() {
+    super();
+    _framerate = 24;
+  }
+  _listeners = [];
+  addListener = (listener) => {
+    return this._listeners.push(listener);
+  }
+  removeListener = (listener) => {
+    const index = this._listeners.indexOf(listener);
+    if (index >= 0) {
+      this._listeners.splice(index, 1);
+    }
+  }
+  start = () => {
+    const timestamp = () => new Date().getTime();
+    let deviceMotion = {accelerationIncludingGravity: {x: 0, y: 0, z: 0}, rotationRate: {alpha: 0, beta: 0, gamma: 0}, timeStamp: 0 }
+    Accelerometer.addListener(({ x, y, z }) => {
+      this.acceleration = {
+        x: x,
+        y: y,
+        z: z
+      };
+      this.update();
+    });
+    Accelerometer.setUpdateInterval(frameRate)
+  
+    Gyroscope.addListener(({ x, y, z }) => {
+      this.rotationRate = {
+        alpha: z,
+        beta: x,
+        gamma: y
+      };
+      this.update();
+    });
+    Gyroscope.setUpdateInterval(frameRate)
+  
+  }
+  stop = () => {
+    Accelerometer.removeAllListeners();
+    Gyroscope.removeAllListeners();
+  }
+  update = () => {
+    for (const listener of _listeners) {
+      listener && listener({
+        timestamp: new Date().getTime(),
+        acceleration: this.acceleration,
+        accelerationIncludingGravity: this.accelerationIncludingGravity,
+        rotationRate: this.rotationRate,
+        interval: this.framerate
+      })
+    }
+  }
+}
+
 export default class App extends React.Component {
 
   componentDidMount() {
-
+    Expo.ScreenOrientation.allow(Expo.ScreenOrientation.Orientation.LANDSCAPE_LEFT);
   }
   render() {
     // return (null);
@@ -97,7 +213,7 @@ export default class App extends React.Component {
     const renderer = ExpoTHREE.createRenderer({ gl });
     renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     renderer.vr.enabled = true;
-    
+    const effect = new StereoEffect(renderer);
 
     WEBVR.getVRDisplay( function ( display ) {
       renderer.vr.setDevice( display );
@@ -112,9 +228,10 @@ export default class App extends React.Component {
       // cube.rotation.x += 0.07;
       // cube.rotation.y += 0.04;
 
+      effect.render(scene, camera, gl);
 
       // find intersections
-				raycaster.setFromCamera( { x: 0, y: 0 }, camera );
+				// raycaster.setFromCamera( { x: 0, y: 0 }, camera );
 				// var intersects = raycaster.intersectObjects( room.children );
 				// if ( intersects.length > 0 ) {
 				// 	if ( INTERSECTED != intersects[ 0 ].object ) {
@@ -151,7 +268,7 @@ export default class App extends React.Component {
 
 
 
-      renderer.render(scene, camera);
+      // renderer.render(scene, camera);
       
       // NOTE: At the end of each frame, notify `Expo.GLView` with the below
       gl.endFrameEXP();

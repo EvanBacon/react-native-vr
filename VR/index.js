@@ -23,7 +23,6 @@ window.WebVRConfig = Util.extend({
 
   // Complementary filter coefficient. 0 for accelerometer, 1 for gyro.
   K_FILTER: 0.98,
-
   // How far into the future to predict during fast motion (in seconds).
   PREDICTION_TIME_S: 0.040,
 

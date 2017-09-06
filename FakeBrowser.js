@@ -119,44 +119,8 @@ Object.defineProperty(window.screen, 'height', {
     enumerable: true,
     configurable: true
 });
-Dimensions.addEventListener("change", ({window: {width, height}}) => window.orientation = width > height ? 90 : 0 );
+window.orientation = -90;
+Dimensions.addEventListener("change", ({window: {width, height}}) => window.orientation = width > height ? -90 : 0 );
 window.devicePixelRatio = 1;
 
-/// I'm just guessing now
-class CustomImage extends Image {
-    constructor(width, height) {
-        super();
-    }
-    set src(val) {
-        this.source = val;
-        if (typeof val === 'string') {
-            Image.prefetch(val);
-            this.source = { uri: val };
-        } else {
-            let asset = Expo.Asset.fromModule(val);
-
-            if (!asset.localUri) {
-                (async () => {
-                    await asset.downloadAsync();
-                })()
-            }
-        }
-    }
-}
-global.Image = CustomImage;
-
-/// Old version
-
-// global.Image = (width = 0, height = 0) => {
-//   let img = new DOMElement('IMG');;
-//   img.width = width
-//   img.height = height
-//   // img.src = "";
-//   if (!asset.localUri) {
-//     await asset.downloadAsync();
-//   }
-//   set src = () => {
-//   }
-//   return img;
-// };
 global.performance = null; 

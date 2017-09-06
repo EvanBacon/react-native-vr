@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { Accelerometer, Gyroscope } from 'expo';
+import { Accelerometer,Magnetometer, Gyroscope } from 'expo';
 
 var ComplementaryFilter = require('./complementary-filter.js');
 var PosePredictor = require('./pose-predictor.js');
@@ -186,6 +186,7 @@ FusionPoseSensor.prototype.onMessage_ = function (event) {
 
 FusionPoseSensor.prototype.setScreenTransform_ = function () {
   this.worldToScreenQ.set(0, 0, 0, 1);
+  console.warn(window.orientation);
   switch (window.orientation) {
     case 0:
       break;
@@ -204,23 +205,27 @@ FusionPoseSensor.prototype.setScreenTransform_ = function () {
 };
 
 FusionPoseSensor.prototype.start = function () {
-  const frameRate = 36;
+  const frameRate = 24;
   const timestamp = () => new Date().getTime();
   let deviceMotion = {accelerationIncludingGravity: {x: 0, y: 0, z: 0}, rotationRate: {alpha: 0, beta: 0, gamma: 0}, timeStamp: 0 }
   Accelerometer.addListener(({ x, y, z }) => {
-    deviceMotion.accelerationIncludingGravity = { x, y, z };
+    // deviceMotion.accelerationIncludingGravity.x = x;
+    // deviceMotion.accelerationIncludingGravity.y = y;
+    //  = { x, y, z };
     deviceMotion.timeStamp = timestamp();
     this.updateDeviceMotion_(deviceMotion);
     
   });
   Accelerometer.setUpdateInterval(frameRate)
 
-  Gyroscope.addListener(({ x, y, z }) => {
-    deviceMotion.rotationRate = { alpha: x, beta: y, gamma: z };
+  Magnetometer.addListener(({ x, y, z }) => {
+    deviceMotion.accelerationIncludingGravity = {x, y, z};
+    
+    // deviceMotion.rotationRate = { alpha: x, beta: y, gamma: z };
     deviceMotion.timeStamp = timestamp();
     this.updateDeviceMotion_(deviceMotion);
   });
-  Gyroscope.setUpdateInterval(frameRate)
+  Magnetometer.setUpdateInterval(frameRate)
 
 
   // this.onDeviceMotionCallback_ = this.onDeviceMotion_.bind(this);
@@ -240,7 +245,7 @@ FusionPoseSensor.prototype.start = function () {
 
 FusionPoseSensor.prototype.stop = function () {
   Accelerometer.removeAllListeners()
-  Gyroscope.removeAllListeners()
+  Magnetometer.removeAllListeners()
   window.removeEventListener('devicemotion', this.onDeviceMotionCallback_);
   window.removeEventListener('orientationchange', this.onOrientationChangeCallback_);
   window.removeEventListener('message', this.onMessageCallback_);
